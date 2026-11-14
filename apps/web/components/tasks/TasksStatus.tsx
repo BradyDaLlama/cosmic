@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Button, Card, Pill } from '@bradydallama/ui';
-import { API_URL } from '@/lib/apiClient';
 import { formatClock } from '@/lib/dates';
+import { connectGoogle } from '@/lib/native';
 import { removeJson } from '@/lib/storage';
 import { dismissNotice, errorMessages, SNAPSHOT_KEY, tasksBackend, undoDelete, useTasksState } from '@/lib/tasks';
 
@@ -92,7 +92,7 @@ export function ConnectGoogle() {
                     {result}
                 </p>
             )}
-            <Button icon="link" onClick={() => (window.location.href = `${API_URL}/api/auth/google`)}>
+            <Button icon="link" onClick={connectGoogle}>
                 Connect Google
             </Button>
         </Card>
@@ -110,9 +110,7 @@ export function SignOutButton() {
             className="self-start text-xs text-bubble underline underline-offset-4 disabled:opacity-50"
             onClick={async () => {
                 setBusy(true);
-                await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(
-                    () => undefined,
-                );
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
                 removeJson(SNAPSHOT_KEY);
                 window.location.href = '/';
             }}

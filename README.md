@@ -2,7 +2,7 @@
 
 A personal life organizer. The Today screen brings together Google Calendar events, Google Tasks, weather,
 routines, habits, goals and budgets, with a pngtuber reading out the day's briefing. It's a Next.js web app,
-with an Android app (Capacitor) planned.
+with an Android app (Capacitor) that wraps it.
 
 ## Features
 
@@ -20,6 +20,7 @@ with an Android app (Capacitor) planned.
 | ------------------ | ---------------------------------------------------- |
 | `apps/web`         | Next.js app: the UI and the API routes               |
 | `apps/web/app/api` | Google sign-in, Tasks, Calendar, MongoDB data, Plaid |
+| `apps/mobile`      | Capacitor Android app that loads the deployed site   |
 
 Google holds tasks and calendar events, and the sign-in is an encrypted cookie. Everything else (settings,
 habits, goals, routines, budgets) is stored in MongoDB Atlas.
@@ -46,6 +47,19 @@ npm run dev        # http://localhost:3000
 npm run build
 npm run typecheck
 npm run format
+```
+
+## Android app
+
+The app opens `https://cosmic.bradydallama.com` in a native shell, so web deploys reach the phone without a
+new APK. Google sign-in runs in a Chrome tab and returns to the app through a `cosmic://auth` link. Rebuild
+the APK only when the native side changes (plugins, `capacitor.config.ts`, the Android project).
+
+Needs Android Studio. After changing plugins or `capacitor.config.ts`:
+
+```bash
+npm run sync --workspace mobile
+npm run open --workspace mobile     # opens Android Studio; run on a device from there
 ```
 
 ## Design system changes

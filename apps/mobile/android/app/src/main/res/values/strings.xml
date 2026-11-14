@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cosmic</string>
+    <string name="title_activity_main">Cosmic</string>
+    <string name="package_name">com.bradydallama.cosmic</string>
+    <string name="custom_url_scheme">com.bradydallama.cosmic</string>
+</resources>

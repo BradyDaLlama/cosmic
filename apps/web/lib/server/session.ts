@@ -19,25 +19,44 @@ function key(): Buffer {
     return createHash('sha256').update(secret).digest();
 }
 
-function seal(session: Session): string {
+function seal(value: unknown): string {
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', key(), iv);
-    const body = Buffer.concat([cipher.update(JSON.stringify(session), 'utf8'), cipher.final()]);
+    const body = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
     return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64url');
 }
 
-function unseal(value: string | undefined): Session | null {
+function open<T>(value: string | undefined): Partial<T> | null {
     if (!value) return null;
     try {
         const raw = Buffer.from(value, 'base64url');
         const decipher = createDecipheriv('aes-256-gcm', key(), raw.subarray(0, 12));
         decipher.setAuthTag(raw.subarray(12, 28));
-        const json = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8');
-        const session = JSON.parse(json) as Session;
-        return session.email && session.refreshToken ? session : null;
+        return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
     } catch {
         return null;
     }
+}
+
+function unseal(value: string | undefined): Session | null {
+    const session = open<Session>(value);
+    return session?.email && session.refreshToken ? (session as Session) : null;
+}
+
+export const APP_SCHEME = 'cosmic';
+export const APP_STATE_PREFIX = 'app.';
+const HANDOFF_MS = 2 * 60_000;
+type Handoff = { handoff: Session; expiresAt: number };
+
+// The app signs in through Chrome, which can't share its cookies with the app, so the session crosses over in a
+// short-lived sealed code instead.
+export const createHandoff = (session: Session) => seal({ handoff: session, expiresAt: Date.now() + HANDOFF_MS });
+
+export function redeemHandoff(code: string | null): Session | null {
+    const sealed = open<Handoff>(code ?? undefined);
+    const session = sealed?.handoff;
+    if (!session?.email || !session.refreshToken || !sealed?.expiresAt || sealed.expiresAt < Date.now()) return null;
+    return session;
 }
 
 const cookieOptions = () => ({

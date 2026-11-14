@@ -1,8 +1,7 @@
 import { TasksError, toTasksError, type TasksApi, type TasksErrorCode } from './api';
-import { API_URL } from '@/lib/apiClient';
 import type { Task, TaskList } from './model';
 
-const BASE = `${API_URL}/api`;
+const BASE = '/api';
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     let res: Response;

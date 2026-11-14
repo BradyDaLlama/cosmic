@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button, Card, Icon, Pill, stagger } from '@bradydallama/ui';
-import { API_URL } from '@/lib/apiClient';
+import { connectGoogle } from '@/lib/native';
 import { isHappening, remaining, type CalendarEvent } from '@/lib/calendar/model';
 import { useDayEvents, useNow } from '@/lib/calendar/useDayEvents';
 import { formatClock } from '@/lib/dates';
@@ -76,7 +76,7 @@ function Body({
                         ? 'Reconnect Google to let Cosmic see your calendar.'
                         : 'Connect Google to see your calendar.'}
                 </p>
-                <Button icon="link" onClick={() => (window.location.href = `${API_URL}/api/auth/google`)}>
+                <Button icon="link" onClick={connectGoogle}>
                     {status === 'reconnect' ? 'Reconnect Google' : 'Connect Google'}
                 </Button>
             </Card>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import { API_URL } from '@/lib/apiClient';
 import { readJson, writeJson } from '@/lib/storage';
 import { useSettings } from '@/lib/settings/useSettings';
 import { tasksBackend } from '@/lib/tasks';
@@ -64,7 +63,7 @@ async function load(date: string): Promise<void> {
     const { start, end } = dayRange(date);
     try {
         const res = await fetch(
-            `${API_URL}/api/calendar/events?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`,
+            `/api/calendar/events?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`,
             { credentials: 'include' },
         );
         const body = await res.json().catch(() => ({}));

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { API_URL } from '@/lib/apiClient';
 import { readJson, writeJson } from '@/lib/storage';
 import type { WeatherResponse } from './model';
 
@@ -30,7 +29,7 @@ async function load(coords: Coords) {
     if (!state.data) set({ status: 'loading' });
     inflight = (async () => {
         try {
-            const res = await fetch(`${API_URL}/api/weather?lat=${coords.lat}&lon=${coords.lon}`);
+            const res = await fetch(`/api/weather?lat=${coords.lat}&lon=${coords.lon}`);
             if (!res.ok) throw new Error(String(res.status));
             const data = (await res.json()) as WeatherResponse;
             set({ status: 'ready', data });

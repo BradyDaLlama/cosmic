@@ -1,5 +1,3 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
-
 export const usesServer = process.env.NEXT_PUBLIC_TASKS_BACKEND === 'http';
 
 export class ApiError extends Error {
@@ -15,7 +13,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
     let res: Response;
     try {
-        res = await fetch(`${API_URL}${path}`, {
+        res = await fetch(path, {
             method: init.method ?? 'GET',
             credentials: 'include',
             headers: init.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,

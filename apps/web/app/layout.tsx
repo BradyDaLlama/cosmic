@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import { NativeBridge } from '@/components/NativeBridge';
 import './globals.css';
 
 // Personal-use font license: never bundle it in the published packages.
@@ -24,7 +25,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="en" data-case="lower" className={display.variable}>
-            <body className="bd-body">{children}</body>
+            <body className="bd-body">
+                {children}
+                <NativeBridge />
+            </body>
         </html>
     );
 }
