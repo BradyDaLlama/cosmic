@@ -9,6 +9,9 @@ const config: CapacitorConfig = {
         url: 'https://cosmic.bradydallama.com',
         errorPath: 'offline.html',
     },
+    plugins: {
+        SystemBars: { style: 'DARK' },
+    },
 };
 
 export default config;
