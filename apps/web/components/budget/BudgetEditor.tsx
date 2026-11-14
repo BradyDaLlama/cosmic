@@ -8,26 +8,23 @@ import { useCategories } from '@/lib/budget/client';
 import { BUDGET_PERIODS, type Budget, type BudgetInput, type BudgetPeriod } from '@/lib/budget/model';
 import { habitColor } from '@/lib/habits/model';
 import { BUDGET_ICONS, SWATCHES } from './look';
-import { PlaidCategoryPicker } from './PlaidCategoryPicker';
 
 const PERIOD_LABEL: Record<BudgetPeriod, string> = { weekly: 'Weekly', monthly: 'Monthly' };
 
 type Props = {
     budget: Budget | null;
     open: boolean;
-    usage: Record<string, number>;
     onClose: () => void;
     onSaved: () => void;
 };
 
-export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
+export function BudgetEditor({ budget, open, onClose, onSaved }: Props) {
     const { categories } = useCategories();
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [period, setPeriod] = useState<BudgetPeriod>('weekly');
     const [color, setColor] = useState('peach');
     const [icon, setIcon] = useState<IconName>('coins');
-    const [plaid, setPlaid] = useState<Set<string>>(new Set());
     const [mine, setMine] = useState<Set<string>>(new Set());
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -41,7 +38,6 @@ export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
         setPeriod(budget?.period ?? 'weekly');
         setColor(budget?.color ?? 'peach');
         setIcon((budget?.icon as IconName) ?? 'coins');
-        setPlaid(new Set(budget?.plaidCategories ?? []));
         setMine(new Set(budget?.categoryIds ?? []));
         setConfirmDelete(false);
         setError(null);
@@ -50,7 +46,7 @@ export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
 
     const spendingCategories = categories.filter((c) => c.kind !== 'ignore');
     const value = Number(amount);
-    const canSave = !!name.trim() && Number.isFinite(value) && value > 0 && plaid.size + mine.size > 0 && !saving;
+    const canSave = !!name.trim() && Number.isFinite(value) && value > 0 && mine.size > 0 && !saving;
 
     const save = async () => {
         const input: BudgetInput = {
@@ -59,7 +55,6 @@ export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
             period,
             color,
             icon,
-            plaidCategories: [...plaid],
             categoryIds: [...mine],
         };
         setSaving(true);
@@ -143,9 +138,13 @@ export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
                     </fieldset>
                 </div>
 
-                {spendingCategories.length > 0 && (
+                {spendingCategories.length === 0 ? (
+                    <p className="text-xs opacity-80">
+                        Budgets count your categories. Make one under Categories first.
+                    </p>
+                ) : (
                     <fieldset className="flex flex-col gap-1">
-                        <legend className="bd-field-label pb-2">Your categories</legend>
+                        <legend className="bd-field-label pb-2">Counts these categories</legend>
                         {spendingCategories.map((c) => (
                             <Checkbox
                                 key={c.id}
@@ -161,19 +160,6 @@ export function BudgetEditor({ budget, open, usage, onClose, onSaved }: Props) {
                         ))}
                     </fieldset>
                 )}
-
-                <fieldset className="flex flex-col gap-2">
-                    <legend className="bd-field-label pb-2">Plaid categories</legend>
-                    {open && (
-                        <PlaidCategoryPicker
-                            key={budget?.id ?? 'new'}
-                            selected={plaid}
-                            onChange={setPlaid}
-                            usage={usage}
-                            hint="Pick a whole group, or open one to pick parts of it. Numbers are your purchases in the last 90 days."
-                        />
-                    )}
-                </fieldset>
 
                 <ColorPicker label="Color" swatches={SWATCHES} tools value={preview.fill} onChange={setColor} />
 

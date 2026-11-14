@@ -11,16 +11,16 @@ with an Android app (Capacitor) that wraps it.
 - **Tasks:** Google Tasks is the source of truth. Today shows what's due; `/tasks` shows every list.
 - **Routines:** checklists of task and wait steps that start fresh each day and can mark a habit done.
 - **Habits and goals:** daily, weekly or monthly habits with streaks, and numbers logged over time with charts.
-- **Budget:** weekly or monthly budgets over bank transactions synced through Plaid (`/budget`), with
+- **Budget:** weekly or monthly budgets over purchases read from Chase alert emails in Gmail (`/budget`), with
   tiles on Today.
 
 ## Layout
 
-| Path               | What                                                 |
-| ------------------ | ---------------------------------------------------- |
-| `apps/web`         | Next.js app: the UI and the API routes               |
-| `apps/web/app/api` | Google sign-in, Tasks, Calendar, MongoDB data, Plaid |
-| `apps/mobile`      | Capacitor Android app that loads the deployed site   |
+| Path               | What                                                        |
+| ------------------ | ----------------------------------------------------------- |
+| `apps/web`         | Next.js app: the UI and the API routes                      |
+| `apps/web/app/api` | Google sign-in, Tasks, Calendar, Gmail alerts, MongoDB data |
+| `apps/mobile`      | Capacitor Android app that loads the deployed site          |
 
 Google holds tasks and calendar events, and the sign-in is an encrypted cookie. Everything else (settings,
 habits, goals, routines, budgets) is stored in MongoDB Atlas.
@@ -36,7 +36,7 @@ license) is bundled here only and supplied to the components through `--bd-font-
    `read:packages`, read by `.npmrc`. Set it once per machine (`setx NPM_TOKEN <token>` on Windows, then open
    a new terminal).
 3. **Environment.** Copy `apps/web/.env.example` to `apps/web/.env.local` and fill it in. It explains each
-   value: Google OAuth client, session secret, allowed emails, MongoDB, and Plaid.
+   value: Google OAuth client, session secret, allowed emails, and MongoDB.
 4. **Demo mode.** Leave `NEXT_PUBLIC_TASKS_BACKEND` unset to run without Google or MongoDB. Tasks and
    calendar events are sample data, habits, goals and routines are saved in the browser, and Budget needs
    the real backend.
@@ -74,4 +74,4 @@ Switch back to the registry version before deploying. New versions are released 
 Vercel, with `apps/web` as the project root and Node 24. Set `NPM_TOKEN` and every value from `.env.example` in the
 project's environment variables, add the production redirect URI
 (`https://<domain>/api/auth/google/callback`) to the Google OAuth client, and allow Vercel in Atlas's IP
-access list.
+access list. Enable the Gmail API in the Google Cloud project for Budget.

@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, Icon, ProgressRing, stagger, type IconName } from '@bradydallama/ui';
 import { api } from '@/lib/apiClient';
+import { dollars, syncIfStale, useOnBudgetChange } from '@/lib/budget/client';
 import type { BudgetsResponse, BudgetStatus } from '@/lib/budget/model';
 import { useToday } from '@/lib/tasks';
-
-const dollars = (n: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
 function summary(b: BudgetStatus) {
     const unit = b.period === 'weekly' ? 'week' : 'month';
@@ -21,7 +19,7 @@ function summary(b: BudgetStatus) {
         >
             {icon && <Icon name={icon} size="xs" className="shrink-0" />}
             <span className="text-pretty text-center">
-                {b.name}, {dollars(Math.abs(b.amount - b.spent))} {over ? 'over' : 'left'} this {unit}
+                {b.name}, {dollars(Math.abs(b.amount - b.spent), false)} {over ? 'over' : 'left'} this {unit}
                 {b.state === 'ahead' && <span className="sr-only">, ahead of pace</span>}
             </span>
         </span>
@@ -32,16 +30,16 @@ export function BudgetTiles({ staggerFrom = 0 }: { staggerFrom?: number }) {
     const today = useToday();
     const [budgets, setBudgets] = useState<BudgetStatus[]>([]);
 
-    useEffect(() => {
+    const load = useCallback(() => {
         if (!today) return;
-        let live = true;
         api<BudgetsResponse>(`/api/budget/budgets?date=${today}`)
-            .then((res) => live && setBudgets(res.budgets))
-            .catch(() => live && setBudgets([]));
-        return () => {
-            live = false;
-        };
+            .then((res) => setBudgets(res.budgets))
+            .catch(() => setBudgets([]));
     }, [today]);
+    useOnBudgetChange(load);
+    useEffect(() => {
+        if (budgets.length) void syncIfStale();
+    }, [budgets.length]);
 
     if (!budgets.length) return null;
 
@@ -62,10 +60,10 @@ export function BudgetTiles({ staggerFrom = 0 }: { staggerFrom?: number }) {
                         >
                             <ProgressRing
                                 value={b.amount ? b.spent / b.amount : 0}
-                                label={`${b.name}: ${dollars(b.spent)} of ${dollars(b.amount)} this ${b.period === 'weekly' ? 'week' : 'month'}`}
+                                label={`${b.name}: ${dollars(b.spent, false)} of ${dollars(b.amount, false)} this ${b.period === 'weekly' ? 'week' : 'month'}`}
                             >
                                 <Icon name={b.icon as IconName} size="sm" className="text-secondary" />
-                                <span className="text-sm">{dollars(b.spent)}</span>
+                                <span className="text-sm">{dollars(b.spent, false)}</span>
                             </ProgressRing>
                             {summary(b)}
                         </Card>

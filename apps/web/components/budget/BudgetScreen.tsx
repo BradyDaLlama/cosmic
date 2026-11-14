@@ -27,13 +27,12 @@ export function BudgetScreen() {
     }, [today]);
     useOnBudgetChange(load);
 
-    const usage = data?.usage ?? {};
     return (
         <>
             <BudgetsSection data={data} error={error} />
-            <InboxSection usage={usage} />
+            <InboxSection />
             <TransactionsSection />
-            <CategoriesSection usage={usage} />
+            <CategoriesSection />
             <BankConnections />
         </>
     );

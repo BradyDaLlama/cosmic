@@ -4,8 +4,9 @@ export class ApiError extends Error {
     constructor(
         readonly status: number,
         readonly code: string,
+        readonly detail?: string,
     ) {
-        super(code);
+        super(detail ?? code);
         this.name = 'ApiError';
     }
 }
@@ -24,7 +25,10 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     }
     if (res.status === 204) return undefined as T;
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new ApiError(res.status, (data as { error?: string }).error ?? 'error');
+    if (!res.ok) {
+        const { error, message } = data as { error?: string; message?: string };
+        throw new ApiError(res.status, error ?? 'error', message);
+    }
     return data as T;
 }
 

@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Card, Input } from '@bradydallama/ui';
 import { api } from '@/lib/apiClient';
-import { PLAID_CATEGORIES, plaidCategoryLabel } from '@/lib/budget/categories';
 import { dollars, useCategories, useOnBudgetChange } from '@/lib/budget/client';
 import { toISODate } from '@/lib/dates';
-import type { BankItem, BudgetAccount, BudgetTransaction, TransactionsResponse } from '@/lib/budget/model';
+import type { BudgetAccount, BudgetTransaction, TransactionsResponse } from '@/lib/budget/model';
 
 const PAGE = 50;
 
@@ -44,7 +43,6 @@ export function TransactionsSection() {
     const [debounced, setDebounced] = useState('');
     const [accountId, setAccountId] = useState('');
     const [categoryId, setCategoryId] = useState('');
-    const [plaid, setPlaid] = useState('');
     const [range, setRange] = useState<RangeKey>('d30');
     const [flow, setFlow] = useState('');
     const [rows, setRows] = useState<BudgetTransaction[]>([]);
@@ -62,14 +60,13 @@ export function TransactionsSection() {
             if (debounced) p.set('q', debounced);
             if (accountId) p.set('accountId', accountId);
             if (categoryId) p.set('categoryId', categoryId);
-            if (plaid) p.set('plaid', plaid);
             if (flow) p.set('flow', flow);
             const { from, to } = RANGES[range].range() as { from?: string; to?: string };
             if (from) p.set('from', from);
             if (to) p.set('to', to);
             return api<TransactionsResponse>(`/api/budget/transactions?${p}`);
         },
-        [debounced, accountId, categoryId, plaid, flow, range],
+        [debounced, accountId, categoryId, flow, range],
     );
 
     const load = useCallback(() => {
@@ -85,7 +82,7 @@ export function TransactionsSection() {
     useOnBudgetChange(load);
 
     const loadAccounts = useCallback(() => {
-        api<{ items: BankItem[]; accounts: BudgetAccount[] }>('/api/budget/accounts')
+        api<{ accounts: BudgetAccount[] }>('/api/budget/accounts')
             .then((res) => setAccounts(res.accounts))
             .catch(() => setAccounts([]));
     }, []);
@@ -103,11 +100,11 @@ export function TransactionsSection() {
 
     const accountName = (id: string) => {
         const a = accounts.find((x) => x.id === id);
-        return a ? `${a.name}${a.mask ? ` ${a.mask}` : ''}` : '';
+        return a?.name ?? '';
     };
     const categoryName = (id?: string) => categories.find((c) => c.id === id)?.name;
     const total = rows.reduce((sum, t) => sum + t.amount, 0);
-    const filtered = !!(debounced || accountId || categoryId || plaid || flow);
+    const filtered = !!(debounced || accountId || categoryId || flow);
 
     return (
         <section className="flex flex-col gap-2">
@@ -143,24 +140,6 @@ export function TransactionsSection() {
                     <option value="in">Received</option>
                 </select>
                 <select
-                    aria-label="Plaid category"
-                    className={selectClass}
-                    value={plaid}
-                    onChange={(e) => setPlaid(e.target.value)}
-                >
-                    <option value="">Any Plaid category</option>
-                    {PLAID_CATEGORIES.map((g) => (
-                        <optgroup key={g.primary} label={g.label}>
-                            <option value={g.primary}>All {g.label.toLowerCase()}</option>
-                            {g.detailed.map((d) => (
-                                <option key={d.code} value={d.code}>
-                                    {d.label}
-                                </option>
-                            ))}
-                        </optgroup>
-                    ))}
-                </select>
-                <select
                     aria-label="Your category"
                     className={selectClass}
                     value={categoryId}
@@ -185,7 +164,6 @@ export function TransactionsSection() {
                         {accounts.map((a) => (
                             <option key={a.id} value={a.id}>
                                 {a.name}
-                                {a.mask ? ` ${a.mask}` : ''}
                             </option>
                         ))}
                     </select>
@@ -211,12 +189,7 @@ export function TransactionsSection() {
                                     {t.pending && <span className="text-xs"> (pending)</span>}
                                 </span>
                                 <span className="truncate text-xs opacity-70">
-                                    {[
-                                        t.date,
-                                        accountName(t.accountId),
-                                        categoryName(t.categoryId) ??
-                                            (t.plaidCategory && plaidCategoryLabel(t.plaidCategory.detailed)),
-                                    ]
+                                    {[t.date, accountName(t.accountId), categoryName(t.categoryId)]
                                         .filter(Boolean)
                                         .join(', ')}
                                 </span>

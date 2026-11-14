@@ -2,21 +2,19 @@ import type { CategoriesResponse, Category, CategoryKind, Rule } from '@/lib/bud
 import { CATEGORY_KINDS } from '@/lib/budget/model';
 import { invalid, isString, newId, notFound, oneOf, requiredText } from '../userRoute';
 import { budgetDb, type CategoryDoc, type RuleDoc } from './db';
-import { PLAID_CODE } from './plaid';
 import { categorize } from './sync';
 
-const toCategory = ({ _id, name, icon, color, kind, plaidMatches, order }: CategoryDoc): Category => ({
+const toCategory = ({ _id, name, icon, color, kind, order }: CategoryDoc): Category => ({
     id: _id,
     name,
     icon,
     color,
     kind,
-    plaidMatches,
     order,
 });
 const toRule = (r: RuleDoc): Rule => ({ id: r._id, merchantContains: r.merchantContains, categoryId: r.categoryId });
 
-type Fields = Pick<CategoryDoc, 'name' | 'icon' | 'color' | 'kind' | 'plaidMatches'>;
+type Fields = Pick<CategoryDoc, 'name' | 'icon' | 'color' | 'kind'>;
 
 function fields(body: Record<string, unknown>, partial: boolean): Partial<Fields> {
     const out: Partial<Fields> = {};
@@ -30,17 +28,11 @@ function fields(body: Record<string, unknown>, partial: boolean): Partial<Fields
         out.color = body.color;
     }
     if (!partial || 'kind' in body) out.kind = oneOf<CategoryKind>(body.kind, CATEGORY_KINDS, 'kind');
-    if (!partial || 'plaidMatches' in body) {
-        const m = body.plaidMatches ?? [];
-        if (!Array.isArray(m) || m.length > 200 || !m.every((c) => isString(c, 80) && PLAID_CODE.test(c)))
-            throw invalid('plaidMatches must be a list of Plaid category codes.');
-        out.plaidMatches = [...new Set(m as string[])];
-    }
     return out;
 }
 
 async function categorizeAll(email: string): Promise<void> {
-    const ids = await (await budgetDb.transactions()).distinct('_id', { email, categorizedBy: { $ne: 'you' } });
+    const ids = await (await budgetDb.transactions()).distinct('_id', { email });
     for (let i = 0; i < ids.length; i += 1000) await categorize(email, ids.slice(i, i + 1000));
 }
 
@@ -63,7 +55,6 @@ export async function createCategory(email: string, body: Record<string, unknown
         order: (last?.order ?? 0) + 1,
     };
     await col.insertOne(doc);
-    await categorizeAll(email);
     return toCategory(doc);
 }
 
@@ -73,7 +64,6 @@ export async function updateCategory(email: string, id: string, body: Record<str
         await budgetDb.categories()
     ).findOneAndUpdate({ _id: id, email }, { $set: set }, { returnDocument: 'after' });
     if (!doc) throw notFound();
-    if ('plaidMatches' in set) await categorizeAll(email);
     return toCategory(doc);
 }
 
@@ -89,9 +79,8 @@ export async function deleteCategory(email: string, id: string): Promise<void> {
     await Promise.all([
         rules.deleteMany({ email, categoryId: id }),
         budgets.updateMany({ email, categoryIds: id }, { $pull: { categoryIds: id } }),
-        txs.updateMany({ email, categoryId: id }, { $unset: { categoryId: '', categorizedBy: '' } }),
+        txs.updateMany({ email, categoryId: id }, { $unset: { categoryId: '' } }),
     ]);
-    await categorizeAll(email);
 }
 
 export async function createRule(email: string, body: Record<string, unknown>): Promise<Rule> {
@@ -121,8 +110,6 @@ export async function deleteRule(email: string, id: string): Promise<void> {
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const UNKNOWN_PLAID = ['OTHER', 'OTHER_OTHER', 'GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE'];
-
 export async function listInbox(email: string) {
     const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
     const rows = await (
@@ -135,11 +122,6 @@ export async function listInbox(email: string) {
                     date: { $gte: since },
                     amount: { $lt: 0 },
                     categoryId: { $exists: false },
-                    $or: [
-                        { plaidCategory: { $exists: false } },
-                        { 'plaidCategory.primary': { $in: UNKNOWN_PLAID } },
-                        { 'plaidCategory.detailed': { $in: UNKNOWN_PLAID } },
-                    ],
                 },
             },
             { $group: { _id: '$merchant', count: { $sum: 1 }, spent: { $sum: '$amount' }, last: { $max: '$date' } } },

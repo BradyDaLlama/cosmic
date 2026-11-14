@@ -1,18 +1,12 @@
 import type { Db } from 'mongodb';
-import type { AccountType } from '@/lib/budget/model';
 import { getDb } from '../db';
 
-export type BankItemDoc = {
+export type ConnectionDoc = {
     _id: string;
     email: string;
-    source: 'plaid';
-    plaidItemId: string;
-    institution: string;
-    institutionId?: string;
-    accessToken: string;
-    cursor?: string;
-    status: 'ok' | 'needs_reconnect';
-    errorCode?: string;
+    source: 'gmail-chase';
+    status: 'ok' | 'error';
+    errors: string[];
     lastSyncedAt?: Date;
     createdAt: Date;
 };
@@ -20,11 +14,10 @@ export type BankItemDoc = {
 export type AccountDoc = {
     _id: string;
     email: string;
-    itemId?: string;
-    plaidAccountId?: string;
+    connectionId?: string;
+    externalId?: string;
+    institution?: string;
     name: string;
-    mask?: string;
-    type: AccountType;
     balance?: number;
     balanceAt?: Date;
     currency?: string;
@@ -35,15 +28,12 @@ export type TransactionDoc = {
     _id: string;
     email: string;
     accountId: string;
-    itemId?: string;
-    plaidTransactionId?: string;
+    connectionId?: string;
+    externalId?: string;
     date: string;
     amount: number;
     merchant: string;
-    plaidCategory?: { primary: string; detailed: string };
     categoryId?: string;
-    categorizedBy?: 'plaid' | 'rule' | 'you';
-    note?: string;
     pending: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -56,7 +46,6 @@ export type CategoryDoc = {
     icon: string;
     color: string;
     kind: 'spending' | 'income' | 'ignore';
-    plaidMatches: string[];
     order: number;
 };
 
@@ -68,8 +57,7 @@ export type BudgetDoc = {
     color: string;
     period: 'weekly' | 'monthly';
     amount: number;
-    plaidCategories: string[];
-    categoryIds?: string[];
+    categoryIds: string[];
     order: number;
     createdAt: Date;
     updatedAt: Date;
@@ -90,7 +78,7 @@ async function openBudgetDb(): Promise<Db> {
 }
 
 export const budgetDb = {
-    items: async () => (await openBudgetDb()).collection<BankItemDoc>('plaidItems'),
+    connections: async () => (await openBudgetDb()).collection<ConnectionDoc>('bankConnections'),
     accounts: async () => (await openBudgetDb()).collection<AccountDoc>('accounts'),
     transactions: async () => (await openBudgetDb()).collection<TransactionDoc>('transactions'),
     categories: async () => (await openBudgetDb()).collection<CategoryDoc>('categories'),
@@ -98,21 +86,24 @@ export const budgetDb = {
     rules: async () => (await openBudgetDb()).collection<RuleDoc>('rules'),
 };
 
-const uniqueWhere = (field: string) => ({ unique: true, partialFilterExpression: { [field]: { $type: 'string' } } });
+const uniqueWhere = (field: string) => ({
+    unique: true,
+    partialFilterExpression: { [field]: { $type: 'string' } },
+});
 
 async function ensureIndexes(db: Db): Promise<void> {
     await Promise.all([
-        db.collection('plaidItems').createIndex({ email: 1 }),
-        db.collection('plaidItems').createIndex({ plaidItemId: 1 }, uniqueWhere('plaidItemId')),
-        db.collection('accounts').createIndex({ email: 1, itemId: 1 }),
-        db.collection('accounts').createIndex({ plaidAccountId: 1 }, uniqueWhere('plaidAccountId')),
+        db.collection('bankConnections').createIndex({ email: 1 }),
+        db.collection('accounts').createIndex({ email: 1, connectionId: 1 }),
+        db.collection('accounts').createIndex({ email: 1, connectionId: 1, externalId: 1 }, uniqueWhere('externalId')),
         db.collection('transactions').createIndex({ email: 1, date: -1 }),
-        db.collection('transactions').createIndex({ plaidTransactionId: 1 }, uniqueWhere('plaidTransactionId')),
+        db
+            .collection('transactions')
+            .createIndex({ email: 1, connectionId: 1, externalId: 1 }, uniqueWhere('externalId')),
         db.collection('transactions').createIndex({ email: 1, categoryId: 1 }),
         db.collection('transactions').createIndex({ email: 1, accountId: 1, date: -1 }),
         db.collection('categories').createIndex({ email: 1, order: 1 }),
         db.collection('budgets').createIndex({ email: 1, order: 1 }),
-        db.collection('transactions').createIndex({ email: 1, 'plaidCategory.detailed': 1, date: -1 }),
         db.collection('rules').createIndex({ email: 1 }),
     ]);
 }

@@ -9,7 +9,7 @@ import { CategoryEditor } from './CategoryEditor';
 
 type InboxRow = { merchant: string; count: number; spent: number; lastDate: string };
 
-export function InboxSection({ usage }: { usage: Record<string, number> }) {
+export function InboxSection() {
     const [rows, setRows] = useState<InboxRow[] | null>(null);
     const [filing, setFiling] = useState<string | null>(null);
     const [newFor, setNewFor] = useState<string | null>(null);
@@ -27,7 +27,8 @@ export function InboxSection({ usage }: { usage: Record<string, number> }) {
         <section className="flex flex-col gap-2">
             <h2 className="text-md text-bubble">Needs a category</h2>
             <p className="text-xs opacity-80">
-                Plaid could not tell what these are. Filing a merchant makes a rule for all of its purchases.
+                Spending from the last 90 days with no category. Filing a merchant makes a rule for all of its
+                purchases.
             </p>
             <Card className="flex flex-col gap-2">
                 {rows.map((r) => (
@@ -59,7 +60,6 @@ export function InboxSection({ usage }: { usage: Record<string, number> }) {
             <CategoryEditor
                 open={newFor !== null}
                 category={null}
-                usage={usage}
                 onClose={() => setNewFor(null)}
                 onSaved={(c: Category) => {
                     if (newFor) void makeRule(newFor, c.id);

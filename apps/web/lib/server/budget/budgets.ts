@@ -1,13 +1,10 @@
 import type { Budget, BudgetPeriod, BudgetPeriodResult, BudgetsResponse, BudgetStatus } from '@/lib/budget/model';
 import { BUDGET_PERIODS } from '@/lib/budget/model';
 import { budgetState, elapsedShare, periodRange, previousRange, type Range } from '@/lib/budget/periods';
-import { addDays } from '@/lib/dates';
 import { invalid, isDate, isNumber, isString, newId, notFound, oneOf, requiredText } from '../userRoute';
 import { budgetDb, type BudgetDoc, type TransactionDoc } from './db';
-import { toTransaction } from './items';
-import { PLAID_CODE } from './plaid';
+import { toTransaction } from './connections';
 
-const USAGE_DAYS = 90;
 const HISTORY = 6;
 
 const toBudget = (d: BudgetDoc): Budget => ({
@@ -17,20 +14,11 @@ const toBudget = (d: BudgetDoc): Budget => ({
     color: d.color,
     period: d.period,
     amount: d.amount,
-    plaidCategories: d.plaidCategories,
-    categoryIds: d.categoryIds ?? [],
+    categoryIds: d.categoryIds,
     order: d.order,
 });
 
-type Fields = Pick<BudgetDoc, 'name' | 'icon' | 'color' | 'period' | 'amount' | 'plaidCategories'> & {
-    categoryIds: string[];
-};
-
-const codeList = (v: unknown, field: string, test: (s: string) => boolean): string[] => {
-    if (!Array.isArray(v) || v.length > 200 || !v.every((c) => isString(c, 80) && test(c)))
-        throw invalid(`${field} must be a list.`);
-    return [...new Set(v as string[])];
-};
+type Fields = Pick<BudgetDoc, 'name' | 'icon' | 'color' | 'period' | 'amount' | 'categoryIds'>;
 
 function fields(body: Record<string, unknown>, partial: boolean): Partial<Fields> {
     const out: Partial<Fields> = {};
@@ -49,18 +37,15 @@ function fields(body: Record<string, unknown>, partial: boolean): Partial<Fields
             throw invalid('amount must be a positive number.');
         out.amount = Math.round(body.amount * 100) / 100;
     }
-    if (!partial || 'plaidCategories' in body)
-        out.plaidCategories = codeList(body.plaidCategories ?? [], 'plaidCategories', (c) => PLAID_CODE.test(c));
-    if (!partial || 'categoryIds' in body)
-        out.categoryIds = codeList(body.categoryIds ?? [], 'categoryIds', (c) => c.length > 0);
-    if (out.plaidCategories && out.categoryIds && out.plaidCategories.length + out.categoryIds.length === 0)
-        throw invalid('Pick at least one category.');
+    if (!partial || 'categoryIds' in body) {
+        const ids = body.categoryIds;
+        if (!Array.isArray(ids) || ids.length > 200 || !ids.every((c) => isString(c, 64) && c))
+            throw invalid('categoryIds must be a list.');
+        if (!ids.length) throw invalid('Pick at least one category.');
+        out.categoryIds = [...new Set(ids as string[])];
+    }
     return out;
 }
-
-const matches = (codes: Set<string>, ids: Set<string>, t: Pick<TransactionDoc, 'plaidCategory' | 'categoryId'>) =>
-    (!!t.categoryId && ids.has(t.categoryId)) ||
-    (!!t.plaidCategory && (codes.has(t.plaidCategory.detailed) || codes.has(t.plaidCategory.primary)));
 
 const within = (r: Range, d: string) => d >= r.start && d <= r.end;
 
@@ -74,15 +59,15 @@ export async function listBudgets(email: string, date: unknown): Promise<Budgets
         budgetDb.transactions(),
         budgetDb.accounts(),
     ]);
-    const [docs, hidden, ignored, first] = await Promise.all([
+    const [docs, hidden, first, connections] = await Promise.all([
         budgetsCol.find({ email }).sort({ order: 1 }).toArray(),
         accountsCol.distinct('_id', { email, hidden: true }),
-        budgetDb.categories().then((c) => c.distinct('_id', { email, kind: 'ignore' })),
         txCol
             .find({ email }, { projection: { date: 1 } })
             .sort({ date: 1 })
             .limit(1)
             .next(),
+        budgetDb.connections().then((c) => c.find({ email }, { projection: { lastSyncedAt: 1 } }).toArray()),
     ]);
     const dataFrom = first?.date ?? date;
 
@@ -95,33 +80,22 @@ export async function listBudgets(email: string, date: unknown): Promise<Budgets
         }
         return { current, history };
     });
-    const usageStart = addDays(date, -USAGE_DAYS);
-    const from = [usageStart, ...ranges.map((r) => (r.history.at(-1) ?? r.current).start)].sort()[0];
+    const from = [date, ...ranges.map((r) => (r.history.at(-1) ?? r.current).start)].sort()[0];
     const to = [date, ...ranges.map((r) => r.current.end)].sort().at(-1)!;
 
     const txs = await txCol
         .find({ email, date: { $gte: from, $lte: to }, accountId: { $nin: hidden } })
         .sort({ date: -1, createdAt: -1 })
         .toArray();
-    const ignore = new Set(ignored);
-    const counted = txs.filter((t) => !t.categoryId || !ignore.has(t.categoryId));
-
-    const usage: Record<string, number> = {};
-    for (const t of txs) {
-        if (!t.plaidCategory || t.date < usageStart || t.date > date) continue;
-        usage[t.plaidCategory.primary] = (usage[t.plaidCategory.primary] ?? 0) + 1;
-        usage[t.plaidCategory.detailed] = (usage[t.plaidCategory.detailed] ?? 0) + 1;
-    }
 
     const budgets: BudgetStatus[] = docs.map((b, i) => {
         const { current, history } = ranges[i];
-        const codes = new Set(b.plaidCategories);
-        const ids = new Set(b.categoryIds ?? []);
+        const ids = new Set(b.categoryIds);
         let spent = 0;
         const past = history.map(() => 0);
         const inPeriod: TransactionDoc[] = [];
-        for (const t of counted) {
-            if (!matches(codes, ids, t)) continue;
+        for (const t of txs) {
+            if (!t.categoryId || !ids.has(t.categoryId)) continue;
             if (within(current, t.date)) {
                 spent -= t.amount;
                 inPeriod.push(t);
@@ -149,7 +123,8 @@ export async function listBudgets(email: string, date: unknown): Promise<Budgets
             transactions: inPeriod.slice(0, 100).map(toTransaction),
         };
     });
-    return { budgets, usage };
+    const dates = connections.map((c) => c.lastSyncedAt?.getTime()).filter((t): t is number => !!t);
+    return { budgets, dataAsOf: dates.length ? new Date(Math.min(...dates)).toISOString() : undefined };
 }
 
 export async function createBudget(email: string, body: Record<string, unknown>): Promise<Budget> {

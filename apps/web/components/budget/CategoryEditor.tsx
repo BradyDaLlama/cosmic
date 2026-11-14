@@ -8,7 +8,6 @@ import { notifyBudgetChanged } from '@/lib/budget/client';
 import { CATEGORY_KINDS, type Category, type CategoryInput, type CategoryKind } from '@/lib/budget/model';
 import { habitColor } from '@/lib/habits/model';
 import { BUDGET_ICONS, SWATCHES } from './look';
-import { PlaidCategoryPicker } from './PlaidCategoryPicker';
 
 const KIND: Record<CategoryKind, { label: string; hint: string }> = {
     spending: { label: 'Spending', hint: 'Purchases. Budgets can count it.' },
@@ -22,17 +21,15 @@ const KIND: Record<CategoryKind, { label: string; hint: string }> = {
 type Props = {
     category: Category | null;
     open: boolean;
-    usage: Record<string, number>;
     onClose: () => void;
     onSaved?: (category: Category) => void;
 };
 
-export function CategoryEditor({ category, open, usage, onClose, onSaved }: Props) {
+export function CategoryEditor({ category, open, onClose, onSaved }: Props) {
     const [name, setName] = useState('');
     const [kind, setKind] = useState<CategoryKind>('spending');
     const [color, setColor] = useState('peach');
     const [icon, setIcon] = useState<IconName>('pricetag');
-    const [matches, setMatches] = useState<Set<string>>(new Set());
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -44,14 +41,13 @@ export function CategoryEditor({ category, open, usage, onClose, onSaved }: Prop
         setKind(category?.kind ?? 'spending');
         setColor(category?.color ?? 'peach');
         setIcon((category?.icon as IconName) ?? 'pricetag');
-        setMatches(new Set(category?.plaidMatches ?? []));
         setConfirmDelete(false);
         setError(null);
         if (!category) requestAnimationFrame(() => nameRef.current?.focus());
     }, [open, category]);
 
     const save = async () => {
-        const input: CategoryInput = { name: name.trim(), kind, color, icon, plaidMatches: [...matches] };
+        const input: CategoryInput = { name: name.trim(), kind, color, icon };
         setSaving(true);
         setError(null);
         try {
@@ -124,19 +120,6 @@ export function CategoryEditor({ category, open, usage, onClose, onSaved }: Prop
                         ))}
                     </div>
                     <p className="text-xs opacity-70">{KIND[kind].hint}</p>
-                </fieldset>
-
-                <fieldset className="flex flex-col gap-2">
-                    <legend className="bd-field-label pb-2">Also file these Plaid categories here</legend>
-                    {open && (
-                        <PlaidCategoryPicker
-                            key={category?.id ?? 'new'}
-                            selected={matches}
-                            onChange={setMatches}
-                            usage={usage}
-                            hint="Optional. Rules you make from the inbox file by merchant name instead."
-                        />
-                    )}
                 </fieldset>
 
                 <ColorPicker label="Color" swatches={SWATCHES} tools value={preview.fill} onChange={setColor} />

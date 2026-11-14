@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { Button, Card, Icon, ProgressBar, type IconName } from '@bradydallama/ui';
 import { HabitBadge } from '@/components/habits/HabitBadge';
-import { plaidCategoryLabel } from '@/lib/budget/categories';
-import { dollars, notifyBudgetChanged, useCategories } from '@/lib/budget/client';
+import { dollars, formatAsOf, notifyBudgetChanged, useCategories } from '@/lib/budget/client';
 import type { Budget, BudgetsResponse, BudgetStatus } from '@/lib/budget/model';
 import { BudgetEditor } from './BudgetEditor';
 
@@ -29,6 +28,8 @@ export function BudgetsSection({ data, error }: { data: BudgetsResponse | null; 
                     </Button>
                 )}
             </div>
+
+            {data?.dataAsOf && <p className="text-xs opacity-70">Chase alerts checked {formatAsOf(data.dataAsOf)}</p>}
 
             {error && (
                 <p role="alert" className="text-xs">
@@ -61,7 +62,6 @@ export function BudgetsSection({ data, error }: { data: BudgetsResponse | null; 
             <BudgetEditor
                 open={editing !== null}
                 budget={editing === 'new' ? null : editing}
-                usage={data?.usage ?? {}}
                 onClose={() => setEditing(null)}
                 onSaved={notifyBudgetChanged}
             />
@@ -100,10 +100,7 @@ function BudgetCard({
     onEdit: () => void;
     categoryName: (id: string) => string | undefined;
 }) {
-    const counts = [
-        ...b.categoryIds.map(categoryName).filter((n): n is string => !!n),
-        ...b.plaidCategories.map(plaidCategoryLabel),
-    ];
+    const counts = b.categoryIds.map(categoryName).filter((n): n is string => !!n);
     return (
         <Card className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
@@ -146,10 +143,7 @@ function BudgetCard({
                                             {t.merchant}
                                             {t.pending && <span className="text-xs"> (pending)</span>}
                                         </span>
-                                        <span className="text-xs opacity-70">
-                                            {t.date}
-                                            {t.plaidCategory ? `, ${plaidCategoryLabel(t.plaidCategory.detailed)}` : ''}
-                                        </span>
+                                        <span className="text-xs opacity-70">{t.date}</span>
                                     </span>
                                     <span>{dollars(-t.amount)}</span>
                                 </li>
