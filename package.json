@@ -1,0 +1,22 @@
+{
+    "name": "cosmic",
+    "private": true,
+    "packageManager": "npm@10.9.4",
+    "workspaces": [
+        "apps/*"
+    ],
+    "scripts": {
+        "dev": "turbo dev",
+        "build": "turbo build",
+        "typecheck": "turbo typecheck",
+        "format": "prettier --write ."
+    },
+    "devDependencies": {
+        "prettier": "^3.6.0",
+        "turbo": "^2.11.10",
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "node": ">=20.9.0"
+    }
+}

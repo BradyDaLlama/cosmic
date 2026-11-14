@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import '@bradydallama/tokens/theme.css';
+@import '@bradydallama/ui/styles.css';
+
+:root {
+    --bd-check-shape: var(--bd-shape-star);
+}
+
+/* Browsers default buttons to text-transform: none, opting them out of the lowercase setting. */
+@layer base {
+    button {
+        text-transform: inherit;
+    }
+}
+
+.cosmic-carousel-track {
+    transition: height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    interpolate-size: allow-keywords;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cosmic-carousel-track {
+        transition: none;
+    }
+}

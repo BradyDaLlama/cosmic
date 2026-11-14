@@ -1,0 +1,31 @@
+# Dependencies and build output
+node_modules
+dist
+out
+.next
+.turbo
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets
+.env*
+!.env.example
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code tooling
+.claude/
+
+# Personal plans and design notes
+docs/
