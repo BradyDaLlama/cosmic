@@ -1,4 +1,3 @@
-import { BudgetTiles } from '@/components/budget/BudgetTiles';
 import { GoalsSection } from '@/components/goals/GoalsSection';
 import { HabitsSection } from '@/components/habits/HabitsSection';
 import { RoutinesSection } from '@/components/routines/RoutinesSection';
@@ -14,8 +13,6 @@ export default function TodayPage() {
             <UpNext />
 
             <TodayTasks />
-
-            <BudgetTiles />
 
             <RoutinesSection />
 

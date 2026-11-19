@@ -12,9 +12,7 @@ export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.e
 export const CALENDAR_LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
 const CALENDAR_SCOPES = [CALENDAR_EVENTS_SCOPE, CALENDAR_LIST_SCOPE];
 
-export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
-
-const SCOPES = ['openid', 'email', TASKS_SCOPE, ...CALENDAR_SCOPES, GMAIL_SCOPE];
+const SCOPES = ['openid', 'email', TASKS_SCOPE, ...CALENDAR_SCOPES];
 
 function credentials() {
     const id = process.env.GOOGLE_CLIENT_ID;
