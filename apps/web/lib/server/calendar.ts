@@ -1,4 +1,5 @@
-import type { CalendarEvent, CalendarInfo } from '@/lib/calendar/model';
+import type { CalendarEvent, CalendarInfo, NewEvent } from '@/lib/calendar/model';
+import { TasksError } from '@/lib/tasks/api';
 import { CALENDAR_EVENTS_SCOPE, CALENDAR_LIST_SCOPE, googleFetch } from './google';
 import type { Session } from './session';
 
@@ -12,6 +13,7 @@ type GCalendar = {
     selected?: boolean;
     hidden?: boolean;
     primary?: boolean;
+    accessRole?: 'freeBusyReader' | 'reader' | 'writer' | 'owner';
 };
 
 type GEventTime = { date?: string; dateTime?: string };
@@ -35,7 +37,7 @@ export const hasCalendar = (session: Session) => !!session.scopes?.includes(CALE
 
 async function calendars(session: Session): Promise<GCalendar[]> {
     if (!session.scopes?.includes(CALENDAR_LIST_SCOPE)) {
-        return [{ id: 'primary', summary: 'Calendar', primary: true }];
+        return [{ id: 'primary', summary: 'Calendar', primary: true, accessRole: 'owner' }];
     }
     const items: GCalendar[] = [];
     let pageToken: string | undefined;
@@ -81,6 +83,7 @@ export async function listCalendars(session: Session): Promise<CalendarInfo[]> {
             name: c.summaryOverride ?? c.summary,
             color: c.backgroundColor,
             primary: !!c.primary,
+            writable: c.accessRole === 'owner' || c.accessRole === 'writer',
         }))
         .sort((a, b) => Number(b.primary) - Number(a.primary) || a.name.localeCompare(b.name));
 }
@@ -104,4 +107,15 @@ export async function events(session: Session, start: Date, end: Date): Promise<
         }),
     );
     return perCalendar.flat();
+}
+
+export async function createEvent(session: Session, input: NewEvent): Promise<CalendarEvent> {
+    const calendar = (await calendars(session)).find((c) => c.id === input.calendarId);
+    if (!calendar) throw new TasksError('not_found', 'That calendar is not available.');
+    const time = (value: string): GEventTime => (input.allDay ? { date: value } : { dateTime: value });
+    const created = await googleFetch<GEvent>(session, `${CALENDAR_URL}/calendars/${q(calendar.id)}/events`, {
+        method: 'POST',
+        body: JSON.stringify({ summary: input.title, start: time(input.start), end: time(input.end) }),
+    });
+    return toEvent(created, calendar);
 }

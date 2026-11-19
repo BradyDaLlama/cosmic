@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card, Icon, Pill, stagger } from '@bradydallama/ui';
 import { connectGoogle } from '@/lib/native';
 import { isHappening, remaining, type CalendarEvent } from '@/lib/calendar/model';
 import { useDayEvents, useNow } from '@/lib/calendar/useDayEvents';
 import { formatClock } from '@/lib/dates';
+import { readJson, writeJson } from '@/lib/storage';
 import { useToday } from '@/lib/tasks';
 import {
     changeIcon,
@@ -18,8 +19,13 @@ import {
 import { useWeather } from '@/lib/weather/useWeather';
 import { useSettings } from '@/lib/settings/useSettings';
 import { CalendarsSheet } from './CalendarsSheet';
+import { DayTimeline } from './DayTimeline';
+import { EventEditor, type EventDraft } from './EventEditor';
 
 const STAGGER_FROM = 2;
+const VIEW_KEY = 'cosmic.upnext.view';
+
+type View = 'list' | 'day';
 
 export function UpNext() {
     const now = useNow();
@@ -28,17 +34,51 @@ export function UpNext() {
     const { data: weather } = useWeather();
     const { canEdit, settings } = useSettings();
     const [choosing, setChoosing] = useState(false);
+    const [draft, setDraft] = useState<EventDraft | null>(null);
+    const [view, setView] = useState<View>('list');
     const hiddenCount = settings.hiddenCalendars.length;
+    const connected = status !== 'signed_out' && status !== 'reconnect';
+
+    useEffect(() => {
+        if (readJson<View>(VIEW_KEY) === 'day') setView('day');
+    }, []);
+    const changeView = (next: View) => {
+        setView(next);
+        writeJson(VIEW_KEY, next);
+    };
 
     return (
         <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-                <h2 className="text-md text-bubble">Up next</h2>
-                <span className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-3">
+                    <h2 className="text-md text-bubble">Up next</h2>
+                    {connected && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            aria-label={view === 'day' ? 'Show the list of events' : 'Show the day timeline'}
+                            onClick={() => changeView(view === 'day' ? 'list' : 'day')}
+                        >
+                            {view === 'day' ? 'List' : 'Day'}
+                        </Button>
+                    )}
+                </span>
+                <span className="flex items-center gap-3">
                     {status === 'offline' && fetchedAt && (
                         <span className="text-xs text-bubble opacity-70">offline, from {formatClock(fetchedAt)}</span>
                     )}
-                    {canEdit && status !== 'signed_out' && status !== 'reconnect' && (
+                    {connected && today && (
+                        <button
+                            type="button"
+                            onClick={() => setDraft({ date: today })}
+                            aria-haspopup="dialog"
+                            className="text-xs text-bubble underline underline-offset-4"
+                        >
+                            + Event
+                        </button>
+                    )}
+                    {canEdit && connected && (
                         <button
                             type="button"
                             onClick={() => setChoosing(true)}
@@ -52,7 +92,16 @@ export function UpNext() {
                 </span>
             </div>
             <CalendarsSheet open={choosing} onClose={() => setChoosing(false)} />
-            <Body events={events} status={status} now={now} weather={weather} />
+            <EventEditor draft={draft} onClose={() => setDraft(null)} />
+            <Body
+                events={events}
+                status={status}
+                now={now}
+                weather={weather}
+                view={view}
+                date={today}
+                onPick={(startMinutes) => today && setDraft({ date: today, startMinutes })}
+            />
         </section>
     );
 }
@@ -62,11 +111,17 @@ function Body({
     status,
     now,
     weather,
+    view,
+    date,
+    onPick,
 }: {
     events?: CalendarEvent[];
     status: string;
     now: number | null;
     weather: WeatherResponse | null;
+    view: View;
+    date: string | null;
+    onPick: (startMinutes: number) => void;
 }) {
     if (status === 'signed_out' || status === 'reconnect') {
         return (
@@ -95,6 +150,28 @@ function Body({
     }
 
     const { timed, allDay } = remaining(events, now);
+    const allDayPills = allDay.length > 0 && (
+        <ul className="flex flex-wrap gap-2" aria-label="All-day events">
+            {allDay.map((e) => (
+                <li key={`${e.calendarId}:${e.id}`}>
+                    <Pill tone="bubble" className="text-xs">
+                        <Dot color={e.color} />
+                        {e.title}
+                    </Pill>
+                </li>
+            ))}
+        </ul>
+    );
+
+    if (view === 'day' && date) {
+        return (
+            <>
+                {allDayPills}
+                <DayTimeline events={events} date={date} now={now} onPick={onPick} />
+            </>
+        );
+    }
+
     const changes = weather ? weatherChanges(weather.slots, now) : [];
     const items: Item[] = [
         ...timed.map((event): Item => ({ kind: 'event', at: Date.parse(event.start), event })),
@@ -103,18 +180,7 @@ function Body({
 
     return (
         <>
-            {allDay.length > 0 && (
-                <ul className="flex flex-wrap gap-2" aria-label="All-day events">
-                    {allDay.map((e) => (
-                        <li key={`${e.calendarId}:${e.id}`}>
-                            <Pill tone="bubble" className="text-xs">
-                                <Dot color={e.color} />
-                                {e.title}
-                            </Pill>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {allDayPills}
             {timed.length === 0 && <Card className="text-sm opacity-80">Nothing else on your calendar today.</Card>}
             {items.length > 0 && (
                 <ul className="flex flex-col gap-3">
