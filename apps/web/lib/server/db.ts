@@ -119,6 +119,22 @@ export type RoutineRunDoc = {
     updatedAt: string;
 };
 
+export type NoteDoc = {
+    _id: string;
+    email: string;
+    type: 'list' | 'text';
+    name: string;
+    icon: string;
+    color: string;
+    text?: string;
+    items: { id: string; text: string; done: boolean }[];
+    createdOn: string;
+    archivedAt?: string;
+    order: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
 export const collections = {
     routines: async () => (await getDb()).collection<RoutineDoc>('routines'),
     routineRuns: async () => (await getDb()).collection<RoutineRunDoc>('routine_runs'),
@@ -126,6 +142,7 @@ export const collections = {
     checkins: async () => (await getDb()).collection<CheckinDoc>('checkins'),
     goals: async () => (await getDb()).collection<GoalDoc>('goals'),
     goalEntries: async () => (await getDb()).collection<GoalEntryDoc>('goal_entries'),
+    notes: async () => (await getDb()).collection<NoteDoc>('notes'),
 };
 
 async function ensureIndexes(db: Db): Promise<void> {
@@ -136,5 +153,6 @@ async function ensureIndexes(db: Db): Promise<void> {
         db.collection('goal_entries').createIndex({ email: 1, goalId: 1, date: 1 }),
         db.collection('routines').createIndex({ email: 1, order: 1 }),
         db.collection('routine_runs').createIndex({ email: 1, date: 1 }),
+        db.collection('notes').createIndex({ email: 1, order: 1 }),
     ]);
 }
