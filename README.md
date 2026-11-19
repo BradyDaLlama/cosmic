@@ -1,7 +1,7 @@
 # cosmic
 
 A personal life organizer. The Today screen brings together Google Calendar events, Google Tasks, weather,
-routines, habits and goals, with a pngtuber reading out the day's briefing. It's a Next.js web app,
+notes, routines, habits and goals, with a pngtuber reading out the day's briefing. It's a Next.js web app,
 with an Android app (Capacitor) that wraps it.
 
 ## Features
@@ -11,6 +11,8 @@ with an Android app (Capacitor) that wraps it.
 - **Tasks:** Google Tasks is the source of truth. Today shows what's due; `/tasks` shows every list.
 - **Routines:** checklists of task and wait steps that start fresh each day and can mark a habit done.
 - **Habits and goals:** daily, weekly or monthly habits with streaks, and numbers logged over time with charts.
+- **Notes:** free text or lists to check off and reorder, kept apart from Google Tasks, each with an icon,
+  a color and the day it was created. Archiving hides a note from Today but keeps its contents.
 
 ## Layout
 
@@ -21,7 +23,7 @@ with an Android app (Capacitor) that wraps it.
 | `apps/mobile`      | Capacitor Android app that loads the deployed site |
 
 Google holds tasks and calendar events, and the sign-in is an encrypted cookie. Everything else (settings,
-habits, goals, routines) is stored in MongoDB Atlas.
+habits, goals, routines, notes) is stored in MongoDB Atlas.
 
 The design system lives in [BradyDaLlama/ui](https://github.com/BradyDaLlama/ui) and is installed from GitHub
 Packages as `@bradydallama/tokens` and `@bradydallama/ui`. The display font (Mini Wakuwaku Maru, personal-use
@@ -36,7 +38,7 @@ license) is bundled here only and supplied to the components through `--bd-font-
 3. **Environment.** Copy `apps/web/.env.example` to `apps/web/.env.local` and fill it in. It explains each
    value: Google OAuth client, session secret, allowed emails, and MongoDB.
 4. **Demo mode.** Leave `NEXT_PUBLIC_TASKS_BACKEND` unset to run without Google or MongoDB. Tasks and
-   calendar events are sample data, and habits, goals and routines are saved in the browser.
+   calendar events are sample data, and habits, goals, routines and notes are saved in the browser.
 
 ```bash
 npm install

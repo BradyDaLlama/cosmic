@@ -11,16 +11,24 @@ const rings = (fill: string): CSSProperties => ({
 });
 
 const sizes = {
-    sm: { box: 'size-8', icon: 'xs' as const },
-    md: { box: 'size-10', icon: 'sm' as const },
+    sm: { box: 'size-8', icon: 'xs' as const, rounded: 'rounded-lg' },
+    md: { box: 'size-10', icon: 'sm' as const, rounded: 'rounded-xl' },
 };
 
-export function HabitBadge({ icon, color, size = 'sm' }: { icon: IconName; color: HabitColor; size?: 'sm' | 'md' }) {
+type HabitBadgeProps = {
+    icon: IconName;
+    color: HabitColor;
+    size?: 'sm' | 'md';
+    /** `rounded` is a rounded square, for chips that aren't pills. */
+    shape?: 'round' | 'rounded';
+};
+
+export function HabitBadge({ icon, color, size = 'sm', shape = 'round' }: HabitBadgeProps) {
     const { fill, ink } = habitColor(color);
     return (
         <span
             aria-hidden
-            className={`grid ${sizes[size].box} shrink-0 place-items-center rounded-full`}
+            className={`grid ${sizes[size].box} shrink-0 place-items-center ${shape === 'round' ? 'rounded-full' : sizes[size].rounded}`}
             style={{ background: ink, color: fill, ...rings(fill) }}
         >
             <Icon name={icon} size={sizes[size].icon} />

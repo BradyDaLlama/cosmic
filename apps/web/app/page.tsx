@@ -1,5 +1,6 @@
 import { GoalsSection } from '@/components/goals/GoalsSection';
 import { HabitsSection } from '@/components/habits/HabitsSection';
+import { NotesSection } from '@/components/notes/NotesSection';
 import { RoutinesSection } from '@/components/routines/RoutinesSection';
 import { TodayTasks } from '@/components/tasks/TodayTasks';
 import { TodayHeader } from '@/components/today/TodayHeader';
@@ -13,6 +14,8 @@ export default function TodayPage() {
             <UpNext />
 
             <TodayTasks />
+
+            <NotesSection />
 
             <RoutinesSection />
 
