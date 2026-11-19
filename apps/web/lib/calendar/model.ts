@@ -14,7 +14,10 @@ export type CalendarEvent = {
 
 export type EventsResponse = { events: CalendarEvent[] };
 
-export type CalendarInfo = { id: string; name: string; color?: string; primary: boolean };
+export type CalendarInfo = { id: string; name: string; color?: string; primary: boolean; writable: boolean };
+
+/** Timed events carry ISO date-times; all-day events carry dates, with `end` the day after the last day. */
+export type NewEvent = { calendarId: string; title: string; allDay: boolean; start: string; end: string };
 
 export function dayRange(date: string): { start: Date; end: Date } {
     const [y, m, d] = date.split('-').map(Number);

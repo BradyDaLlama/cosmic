@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { api } from '@/lib/apiClient';
+import { toISODate } from '@/lib/dates';
+import { newId } from '@/lib/id';
 import { readJson, writeJson } from '@/lib/storage';
 import { useSettings } from '@/lib/settings/useSettings';
 import { tasksBackend } from '@/lib/tasks';
-import { dayRange, type CalendarEvent, type EventsResponse } from './model';
+import { dayRange, type CalendarEvent, type CalendarInfo, type EventsResponse, type NewEvent } from './model';
 
 type EventsStatus = 'loading' | 'ready' | 'signed_out' | 'reconnect' | 'offline' | 'error';
 
@@ -32,6 +35,13 @@ const readSnapshot = () => readJson<Snapshot>(SNAPSHOT_KEY) ?? {};
 const writeSnapshot = (date: string, events: CalendarEvent[], fetchedAt: number) =>
     writeJson(SNAPSHOT_KEY, { [date]: { events, fetchedAt } });
 
+export const DEMO_CALENDARS: CalendarInfo[] = [
+    { id: 'demo', name: 'Demo', primary: true, writable: true },
+    { id: 'demo-friends', name: 'Friends', color: '#7fc8a9', primary: false, writable: true },
+];
+
+const DEMO_ADDED_KEY = 'cosmic.calendar.demo.added';
+
 function demoEvents(date: string): CalendarEvent[] {
     const { start } = dayRange(date);
     const at = (h: number, m: number) => new Date(start.getFullYear(), start.getMonth(), start.getDate(), h, m);
@@ -46,11 +56,46 @@ function demoEvents(date: string): CalendarEvent[] {
         start: at(h, m).toISOString(),
         end: new Date(+at(h, m) + minutes * 60_000).toISOString(),
     });
+    const added = (readJson<CalendarEvent[]>(DEMO_ADDED_KEY) ?? []).filter((e) => eventDate(e) === date);
     return [
         make('demo-1', 'Standup', 'Zoom', 9, 30, 30),
+        make('demo-4', 'Design review', 'Room 2', 9, 45, 45),
         make('demo-2', 'Lunch with Sam', 'Noodle Bar', 12, 0, 60),
         make('demo-3', 'Climbing', 'Boulder Gym', 18, 0, 90),
+        ...added,
     ];
+}
+
+/** The day an event is filed under: its start date, in local time for timed events. */
+const eventDate = (e: CalendarEvent) => (e.allDay ? e.start : toISODate(new Date(e.start)));
+
+function demoCreate(input: NewEvent): CalendarEvent {
+    const calendar = DEMO_CALENDARS.find((c) => c.id === input.calendarId) ?? DEMO_CALENDARS[0];
+    const event: CalendarEvent = {
+        id: `demo-${newId()}`,
+        calendarId: calendar.id,
+        calendarName: calendar.name,
+        color: calendar.color,
+        title: input.title.trim(),
+        allDay: input.allDay,
+        start: input.start,
+        end: input.end,
+    };
+    writeJson(DEMO_ADDED_KEY, [...(readJson<CalendarEvent[]>(DEMO_ADDED_KEY) ?? []), event]);
+    return event;
+}
+
+/** Creates the event, then shows it on its day straight away and refetches that day to settle. */
+export async function createEvent(input: NewEvent): Promise<CalendarEvent> {
+    const event =
+        tasksBackend === 'demo'
+            ? demoCreate(input)
+            : (await api<{ event: CalendarEvent }>('/api/calendar/events', { method: 'POST', body: input })).event;
+    const date = eventDate(event);
+    const entry = entries[date];
+    if (entry?.events) setEntry(date, { ...entry, events: [...entry.events, event] });
+    void refresh(date);
+    return event;
 }
 
 async function load(date: string): Promise<void> {

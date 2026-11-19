@@ -8,6 +8,9 @@ with an Android app (Capacitor) that wraps it.
 
 - **Today:** greeting and briefing, a weather pill that scrubs through the forecast, and Up next from
   Google Calendar with rain, snow and thunderstorm changes in between.
+- **Calendar:** switch Up next between cards and a day timeline where events fill their time slots, overlaps
+  stack like Google Calendar and a line marks now. Add events (timed or all-day, to any calendar you can edit) from
+  `+ Event` or by tapping an open stretch of the timeline.
 - **Tasks:** Google Tasks is the source of truth. Today shows what's due; `/tasks` shows every list.
 - **Routines:** checklists of task and wait steps that start fresh each day and can mark a habit done.
 - **Habits and goals:** daily, weekly or monthly habits with streaks, and numbers logged over time with charts.
