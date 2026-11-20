@@ -35,7 +35,7 @@ export function remaining(events: CalendarEvent[], now: number) {
 
 export const isHappening = (e: CalendarEvent, now: number) => !e.allDay && startMs(e) <= now && endMs(e) > now;
 
-function firstFreeWindow(
+export function firstFreeWindow(
     events: CalendarEvent[],
     now: number,
     { minMinutes = 60, untilHour = 21 } = {},

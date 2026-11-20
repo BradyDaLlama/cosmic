@@ -72,7 +72,9 @@ export function lastOpenRoot(tasks: Task[]): Task | undefined {
 
 type DueGroups = { overdue: Task[]; today: Task[]; upcoming: Task[] };
 
-export function dueGroups(tasks: Task[], today: string, upcomingDays = 7): DueGroups {
+export const UPCOMING_DAYS = 7;
+
+export function dueGroups(tasks: Task[], today: string, upcomingDays = UPCOMING_DAYS): DueGroups {
     const until = addDays(today, upcomingDays);
     const sort = (a: Task, b: Task) =>
         (a.due ?? '').localeCompare(b.due ?? '') ||

@@ -4,7 +4,16 @@ import Link from 'next/link';
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { Card, Input } from '@bradydallama/ui';
 import { addDays } from '@/lib/dates';
-import { createTask, dueGroups, useDueTasks, useTaskLists, useTasksState, useToday, type Task } from '@/lib/tasks';
+import {
+    createTask,
+    dueGroups,
+    UPCOMING_DAYS,
+    useDueTasks,
+    useTaskLists,
+    useTasksState,
+    useToday,
+    type Task,
+} from '@/lib/tasks';
 import { Carousel, type CarouselSlide } from './Carousel';
 import { ListPanel, NEW_LIST_SLIDE, NewListDialog, NewListSlide } from './ListPanel';
 import { ListPicker } from './ListPicker';
@@ -12,7 +21,6 @@ import { TaskDetails } from './TaskDetails';
 import { TaskRow } from './TaskRow';
 import { ConnectGoogle, DemoBadge, OfflineNote, TasksNotices, TaskSkeleton } from './TasksStatus';
 
-const UPCOMING_DAYS = 7;
 const DUE_SLIDE = 'due';
 
 export function TodayTasks() {

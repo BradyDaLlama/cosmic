@@ -58,8 +58,8 @@ export function useListTasks(listId: string | undefined): Query<Task[]> {
     return { ...query, data: useVisible(query.data) };
 }
 
-export function useDueTasks(until: string): Query<Task[]> {
-    const query = useQuery(queries.due(until));
+export function useDueTasks(until: string | null): Query<Task[]> {
+    const query = useQuery(until ? queries.due(until) : null);
     return { ...query, data: useVisible(query.data) };
 }
 
