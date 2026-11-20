@@ -16,13 +16,15 @@ with an Android app (Capacitor) that wraps it.
 - **Habits and goals:** daily, weekly or monthly habits with streaks, and numbers logged over time with charts.
 - **Notes:** free text or lists to check off and reorder, kept apart from Google Tasks, each with an icon,
   a color and the day it was created. Archiving hides a note from Today but keeps its contents.
+- **AI briefing (optional):** a small self-hosted model rewrites the Today briefing from your events, tasks,
+  habits and weather, streaming it into the bubble as it's written. Without one, the plain briefing stays.
 
 ## Layout
 
 | Path               | What                                               |
 | ------------------ | -------------------------------------------------- |
 | `apps/web`         | Next.js app: the UI and the API routes             |
-| `apps/web/app/api` | Google sign-in, Tasks, Calendar, MongoDB data      |
+| `apps/web/app/api` | Google sign-in, Tasks, Calendar, MongoDB data, AI  |
 | `apps/mobile`      | Capacitor Android app that loads the deployed site |
 
 Google holds tasks and calendar events, and the sign-in is an encrypted cookie. Everything else (settings,
@@ -39,7 +41,7 @@ license) is bundled here only and supplied to the components through `--bd-font-
    `read:packages`, read by `.npmrc`. Set it once per machine (`setx NPM_TOKEN <token>` on Windows, then open
    a new terminal).
 3. **Environment.** Copy `apps/web/.env.example` to `apps/web/.env.local` and fill it in. It explains each
-   value: Google OAuth client, session secret, allowed emails, and MongoDB.
+   value: Google OAuth client, session secret, allowed emails, MongoDB, and the optional AI model.
 4. **Demo mode.** Leave `NEXT_PUBLIC_TASKS_BACKEND` unset to run without Google or MongoDB. Tasks and
    calendar events are sample data, and habits, goals, routines and notes are saved in the browser.
 
